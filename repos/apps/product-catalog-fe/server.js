@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser= require('body-parser');
 const axios = require('axios');
 const path = require("path");
 const Prometheus = require('prom-client');
@@ -19,7 +18,7 @@ const app = express();
 app.set('view engine', 'ejs')
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use(bodyParser.urlencoded({extended: true}))
+app.use(express.urlencoded({extended: true}))
 
 app.get('/', (_, res) => {
   const requestOne = axios.get(baseProductUrl);
