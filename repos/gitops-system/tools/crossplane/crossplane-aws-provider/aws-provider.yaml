@@ -12,7 +12,11 @@ spec:
           annotations:
             eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role
         spec:
-          containers: []
+          containers:
+          - name: package-runtime
+            env:
+            - name: AWS_DEFAULT_REGION
+              value: ${AWS_REGION}
           securityContext:
             fsGroup: 2000
 ---
