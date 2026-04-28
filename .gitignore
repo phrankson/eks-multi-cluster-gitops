@@ -2,3 +2,5 @@
 .project
 .vscode
 wl-kube.conf
+git-creds-system.yaml
+git-creds-workloads.yaml
