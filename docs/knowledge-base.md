@@ -1,8 +1,9 @@
 # Knowledge Base: EKS Multi-Cluster GitOps
 
 **Analysis date:** 2026-04-27  
+**Last updated:** 2026-04-28 (Phases 1–9 applied)  
 **Repo origin:** aws-samples/multi-cluster-gitops (re-init 2024, component versions span 2022–2024)  
-**Overall staleness:** HIGH — multiple components are at EOL or carry deprecated APIs that will break on upgrade
+**Overall staleness:** LOW — Phases 1–9 complete. Three items remain as future projects (FP-1 through FP-3) requiring live cluster access or architectural rewrite.
 
 ---
 
@@ -26,45 +27,44 @@
 16. [Deprecated Crossplane Constructs](#16-deprecated-crossplane-constructs)
 17. [Upgrade Priority Matrix](#17-upgrade-priority-matrix)
 18. [Artifact Pull Reference](#18-artifact-pull-reference)
+19. [Future Projects](#19-future-projects)
 
 ---
 
 ## 1. Stack Summary
 
-| Layer | Tool | Pinned Version | Status |
+| Layer | Tool | Version | Status |
 |---|---|---|---|
-| GitOps engine | FluxCD | v2.1.2 | Outdated |
-| Infrastructure controller | Crossplane | v1.15.0 | Outdated |
-| AWS provider (Crossplane) | crossplane-contrib/provider-aws | v0.47.1 | **Archived** |
-| K8s provider (Crossplane) | crossplane-contrib/provider-kubernetes | v0.13.0 | Outdated |
-| Secrets (Git) | Sealed Secrets | chart 2.7.1 | Outdated |
-| Secrets (AWS SM) | External Secrets Operator | chart 0.4.4 | **Critical — v1alpha1 API removed** |
-| Node autoscaler | Karpenter | v0.36.1 | **API breaking change in v1.x** |
-| Load balancer | AWS Load Balancer Controller | chart 1.4.6 | Outdated |
-| Storage | AWS EBS CSI Driver | chart 2.30.0 | Outdated |
-| Cost visibility | Kubecost cost-analyzer | chart 2.2.2 | Outdated |
-| Management cluster | EKS | 1.29 | Approaching EOL |
-| Workload cluster template | EKS | 1.28 | **EOL** |
-| API backend | Python / Flask | 3.9 / 3.0.3 | Python 3.9 approaching EOL |
-| Web frontend | Node.js | 14 | **EOL April 2023** |
-| Bootstrap environment | AWS Cloud9 | Ubuntu 18.04 | **Ubuntu 18.04 EOL** |
+| GitOps engine | FluxCD | v2.1.2 | Open — FP-2 (requires live cluster bootstrap) |
+| Infrastructure controller | Crossplane | v1.19.2 | ✅ Updated (Phase 9) |
+| AWS provider (Crossplane) | crossplane-contrib/provider-aws | v0.47.1 | Open — FP-1 (archived, major rewrite required) |
+| K8s provider (Crossplane) | crossplane-contrib/provider-kubernetes | v0.16.0 | ✅ Updated (Phase 9) |
+| Secrets (Git) | Sealed Secrets | chart 2.16.2 | ✅ Updated (Phase 6) |
+| Secrets (AWS SM) | External Secrets Operator | chart 0.10.7 | ✅ Updated (Phase 5) |
+| Node autoscaler | Karpenter | chart 1.3.1 | ✅ Updated (Phase 8) |
+| Load balancer | AWS Load Balancer Controller | chart 1.11.0 | ✅ Updated (Phase 7) |
+| Storage | AWS EBS CSI Driver | chart 2.38.1 | ✅ Updated (Phase 7) |
+| Cost visibility | Kubecost cost-analyzer | chart 2.6.0 | ✅ Updated (Phase 7) |
+| Management cluster | EKS | template → 1.31 | ✅ Template updated (Phase 2); live upgrade is operational |
+| Workload cluster template | EKS | 1.31 | ✅ Updated (Phase 2) |
+| API backend | Python / Flask | 3.12-slim / 3.0.3 | ✅ Python upgraded (Phase 1) |
+| Web frontend | Node.js | 22-slim | ✅ Upgraded from EOL 14 (Phase 1) |
+| Bootstrap environment | AWS Cloud9 | amazonlinux-2-x86_64 | ✅ Updated in README (Phase 2/3) |
 
 ---
 
 ## 2. CLI Tools Required
 
-These versions are pinned in `initial-setup/README.md` and the CFN template. All require updates.
+Versions are pinned in `initial-setup/README.md`. All updated in Phase 3.
 
 ### kubectl
 | | Value |
 |---|---|
-| Pinned version | 1.24.7 |
-| Install command (from setup) | `s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl` |
-| Required version | Must be within one minor version of your EKS cluster (1.28–1.30) |
+| **Current pinned version** | **1.31.0** ✅ |
+| Install command | `https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.0/2024-09-12/bin/linux/amd64/kubectl` |
+| Skew policy | Must be within one minor version of EKS cluster (cluster 1.31 → kubectl 1.30–1.32) |
 | Current stable | 1.32.x |
 | Get current | https://dl.k8s.io/release/stable.txt |
-| Download | `https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl` |
-| **Action** | Update install script to use EKS-version-matched kubectl |
 
 ### Flux CLI
 | | Value |
@@ -73,41 +73,38 @@ These versions are pinned in `initial-setup/README.md` and the CFN template. All
 | Install | `curl -s https://fluxcd.io/install.sh | sudo bash` (fetches latest) |
 | Current stable | v2.5.x |
 | Releases | https://github.com/fluxcd/flux2/releases |
-| **Action** | Flux CLI version must match the deployed FluxCD version. If upgrading FluxCD, run `flux install` to regenerate `gotk-components.yaml`. |
+| **Note** | Flux CLI version must match deployed FluxCD. Upgrading requires `flux bootstrap` to regenerate `gotk-components.yaml` — see FP-2. |
 
 ### kubeseal
 | | Value |
 |---|---|
-| Pinned version | v0.19.4 |
-| Download (setup script) | `https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.4/kubeseal-0.19.4-linux-amd64.tar.gz` |
-| Current stable | v0.27.x |
-| Releases | https://github.com/bitnami-labs/sealed-secrets/releases |
-| **CRITICAL** | kubeseal CLI version must match the Sealed Secrets controller chart version. Currently chart is 2.7.1 (controller v0.19.5). If upgrading the chart, update the CLI to match. |
+| **Current pinned version** | **v0.27.0** ✅ |
+| Download | `https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.27.0/kubeseal-0.27.0-linux-amd64.tar.gz` |
+| Matches chart | 2.16.2 (controller v0.27.x) ✅ |
+| **CRITICAL** | kubeseal CLI version must always match the Sealed Secrets controller chart version. |
 
 ### eksctl
 | | Value |
 |---|---|
-| Pinned version | "latest" at install time |
-| Install | `https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz` |
+| **Current pinned version** | **v0.208.0** ✅ |
+| Install | `https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Linux_amd64.tar.gz` |
 | Current stable | v0.208.x |
 | Releases | https://github.com/eksctl-io/eksctl/releases |
-| **Action** | Re-pin to a specific version for reproducibility. Weaveworks transferred the repo to `eksctl-io/eksctl`. |
+| **Note** | Weaveworks transferred the repo to `eksctl-io/eksctl`. Install URL updated accordingly. |
 
 ### yq
 | | Value |
 |---|---|
-| Pinned version | v4.24.5 |
-| Download | `https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64` |
+| **Current pinned version** | **v4.44.3** ✅ |
+| Download | `https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64` |
 | Current stable | v4.45.x |
 | Releases | https://github.com/mikefarah/yq/releases |
-| **Action** | Update to v4.44+ (no breaking changes in 4.x series) |
 
 ### AWS CLI
 | | Value |
 |---|---|
 | Pinned version | v2 (latest) |
 | Install | `https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip` |
-| Current | v2.24.x |
 | **Action** | No pin — acceptable, but lock in CI/CD contexts |
 
 ### GitHub CLI (gh)
@@ -124,7 +121,7 @@ These versions are pinned in `initial-setup/README.md` and the CFN template. All
 ### Deployment
 - **Installed via:** `flux bootstrap` against `gitops-system` repo
 - **Generated manifest:** `repos/gitops-system/clusters/mgmt/flux-system/gotk-components.yaml`
-- **Pinned version:** v2.1.2 (stamped in gotk-components.yaml header)
+- **Pinned version:** v2.1.2 (stamped in gotk-components.yaml header) — **not yet upgraded (FP-2)**
 - **Current stable:** v2.5.x
 - **Releases:** https://github.com/fluxcd/flux2/releases
 - **Changelog:** https://fluxcd.io/flux/releases/
@@ -132,27 +129,19 @@ These versions are pinned in `initial-setup/README.md` and the CFN template. All
 ### Components installed
 `source-controller`, `kustomize-controller`, `helm-controller`, `notification-controller`
 
-### Deprecated API versions in use (across ALL manifests)
+### API versions — RESOLVED ✅ (Phase 4)
 
-| API in repo | Replacement | Deprecated since |
+All deprecated Flux API versions have been replaced across 51 manifests:
+
+| Old API | New API | Status |
 |---|---|---|
-| `helm.toolkit.fluxcd.io/v2beta1` | `helm.toolkit.fluxcd.io/v2` | Flux 2.3 |
-| `source.toolkit.fluxcd.io/v1beta2` | `source.toolkit.fluxcd.io/v1` | Flux 2.0 |
-| `kustomize.toolkit.fluxcd.io/v1beta2` | `kustomize.toolkit.fluxcd.io/v1` | Flux 2.0 |
+| `helm.toolkit.fluxcd.io/v2beta1` | `helm.toolkit.fluxcd.io/v2` | ✅ Replaced |
+| `source.toolkit.fluxcd.io/v1beta2` | `source.toolkit.fluxcd.io/v1` | ✅ Replaced |
+| `kustomize.toolkit.fluxcd.io/v1beta2` | `kustomize.toolkit.fluxcd.io/v1` | ✅ Replaced |
 
-**Affected files (all HelmRelease and GitRepository/Kustomization manifests):**
-- `repos/gitops-system/tools/crossplane/crossplane-core/crossplane-release.yaml`
-- `repos/gitops-system/tools/crossplane/crossplane-aws-provider.yaml`
-- `repos/gitops-system/tools/crossplane/crossplane-k8s-provider.yaml`
-- `repos/gitops-system/tools/external-secrets/external-secrets-release.yaml`
-- `repos/gitops-system/tools/sealed-secrets/sealed-secrets-release.yaml`
-- `repos/gitops-system/tools/karpenter/karpenter-release.yaml`
-- `repos/gitops-system/tools/aws-load-balancer-controller/aws-lb-controller-release.yaml`
-- `repos/gitops-system/tools/aws-ebs-csi/aws-ebs-csi-release.yaml`
-- `repos/gitops-system/tools/kubecost/kubecost-release.yaml`
-- All `gotk-sync.yaml` and `kustomization.yaml` files under `clusters/`
+`gotk-components.yaml` was intentionally excluded — it is auto-generated by `flux bootstrap` and must never be manually edited.
 
-### Upgrade path
+### Upgrade path (FP-2)
 ```bash
 # 1. Update Flux CLI to target version
 curl -s https://fluxcd.io/install.sh | sudo bash   # or pin: FLUX_VERSION=v2.5.1
@@ -163,8 +152,6 @@ flux bootstrap github \
   --repository=gitops-system \
   --branch=main \
   --path=clusters/mgmt
-
-# 3. Update all apiVersion fields in manifests (sed or yq across repo)
 ```
 
 ---
@@ -173,59 +160,24 @@ flux bootstrap github \
 
 ### Deployment
 - **Chart:** `crossplane` from `https://charts.crossplane.io/stable`
-- **Pinned chart version:** 1.15.0
+- **Chart version:** **1.19.2** ✅ (upgraded from 1.15.0 in Phase 9)
 - **File:** `repos/gitops-system/tools/crossplane/crossplane-core/crossplane-release.yaml`
-- **Current chart version:** 1.19.x
 - **Releases:** https://github.com/crossplane/crossplane/releases
-- **Helm chart:** https://charts.crossplane.io/stable (index at https://charts.crossplane.io/stable/index.yaml)
-- **Migration guide (1.15→1.19):** https://docs.crossplane.io/latest/guides/
 
-### Key deprecation: ControllerConfig → DeploymentRuntimeConfig
+### ControllerConfig → DeploymentRuntimeConfig — RESOLVED ✅ (Phase 9)
 
-**ControllerConfig** (`pkg.crossplane.io/v1alpha1`) was deprecated in Crossplane 1.14 and removed in 1.17+.
+`ControllerConfig` (`pkg.crossplane.io/v1alpha1`) was removed in Crossplane 1.17. Both providers have been migrated to `DeploymentRuntimeConfig` (`pkg.crossplane.io/v1beta1`):
 
-**Affected files:**
-- `repos/gitops-system/tools/crossplane/crossplane-aws-provider/aws-provider.yaml` — uses `ControllerConfig` named `aws-config`
-- `repos/gitops-system/tools/crossplane/crossplane-k8s-provider/k8s-provider.yaml` — uses `ControllerConfig` named `k8s-config`
+- `repos/gitops-system/tools/crossplane/crossplane-aws-provider/aws-provider.yaml` ✅
+- `repos/gitops-system/tools/crossplane/crossplane-k8s-provider/k8s-provider.yaml` ✅
+- `repos/gitops-system/clusters/template/crossplane.yaml` — patch target updated to `DeploymentRuntimeConfig/v1beta1`, annotation path updated to `spec.deploymentTemplate.spec.template.metadata.annotations` ✅
 
-**Replacement:** `DeploymentRuntimeConfig` (`pkg.crossplane.io/v1beta1`)
-
-```yaml
-# OLD (deprecated)
-apiVersion: pkg.crossplane.io/v1alpha1
-kind: ControllerConfig
-metadata:
-  name: aws-config
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role
-spec:
-  podSecurityContext:
-    fsGroup: 2000
-
-# NEW
-apiVersion: pkg.crossplane.io/v1beta1
-kind: DeploymentRuntimeConfig
-metadata:
-  name: aws-config
-spec:
-  deploymentTemplate:
-    spec:
-      selector: {}
-      template:
-        metadata:
-          annotations:
-            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role
-        spec:
-          securityContext:
-            fsGroup: 2000
-```
-
-### k8s-provider-config-job: stale kubectl image
+### k8s-provider-config-job: kubectl image — RESOLVED ✅ (Phase 9)
 
 - **File:** `repos/gitops-system/tools/crossplane/crossplane-k8s-provider-config/k8s-providerconfig.yaml`
-- **Image in use:** `bitnami/kubectl:1.22.11` (Kubernetes 1.22 is EOL since 2022-10-28)
-- **Replacement:** `bitnami/kubectl:1.29` or `public.ecr.aws/aws-cli/aws-cli` + kubectl binary
-- **Note:** This Job + CronJob grants `cluster-admin` to the Kubernetes provider SA. This is a known workaround pattern but is a security concern worth reviewing.
+- **Old image:** `bitnami/kubectl:1.22.11` (K8s 1.22 EOL 2022-10-28)
+- **New image:** `bitnami/kubectl:1.31` ✅
+- **Note:** This Job + CronJob grants `cluster-admin` to the Kubernetes provider SA. This is a known workaround pattern — review whether provider-kubernetes v0.16+ resolves this without a CronJob.
 
 ---
 
@@ -238,9 +190,9 @@ spec:
 | Package | `xpkg.upbound.io/crossplane-contrib/provider-aws:v0.47.1` |
 | File | `repos/gitops-system/tools/crossplane/crossplane-aws-provider/aws-provider.yaml` |
 | Registry | https://marketplace.upbound.io/providers/crossplane-contrib/provider-aws |
-| Status | **ARCHIVED** — the monolithic community provider is no longer maintained |
+| Status | **ARCHIVED — FP-1** — monolithic community provider no longer maintained |
 
-**Critical architectural issue:** Upbound replaced the monolithic `crossplane-contrib/provider-aws` with a family of granular official providers. The new providers have different package names and different API group paths.
+**Critical architectural issue (FP-1):** Upbound replaced the monolithic `crossplane-contrib/provider-aws` with a family of granular official providers. Every resource in the Crossplane composition changes API group.
 
 | Old (archived) | New (official Upbound) |
 |---|---|
@@ -249,12 +201,9 @@ spec:
 | `eks.aws.crossplane.io/v1beta1` | `eks.aws.upbound.io/v1beta1` |
 | `iam.aws.crossplane.io/v1beta1` | `iam.aws.upbound.io/v1beta1` |
 
-**Impact:** Every resource in the Crossplane composition (`tools-config/crossplane-eks-composition/composition.yaml`) uses the old API groups. A migration requires:
-1. Installing the new provider family packages
-2. Rewriting all Composition resources to use `*.aws.upbound.io` API groups
-3. Migrating existing managed resources (or deleting and recreating — with care around EKS clusters)
+**Impact:** All ~50 managed resource definitions in `tools-config/crossplane-eks-composition/composition.yaml` must be rewritten. Treat as a separate project (FP-1).
 
-**New provider packages (from Upbound Marketplace):**
+**New provider packages (Upbound Marketplace):**
 - Root: `xpkg.upbound.io/upbound/provider-family-aws`
 - EC2: `xpkg.upbound.io/upbound/provider-aws-ec2`
 - EKS: `xpkg.upbound.io/upbound/provider-aws-eks`
@@ -265,13 +214,12 @@ spec:
 
 | | Value |
 |---|---|
-| Package | `xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.13.0` |
+| Package | `xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.16.0` ✅ |
 | File | `repos/gitops-system/tools/crossplane/crossplane-k8s-provider/k8s-provider.yaml` |
-| Current stable | v0.16.x |
+| Upgraded from | v0.13.0 (Phase 9) |
 | Releases | https://github.com/crossplane-contrib/provider-kubernetes/releases |
 | Marketplace | https://marketplace.upbound.io/providers/crossplane-contrib/provider-kubernetes |
 | API version in use | `kubernetes.crossplane.io/v1alpha1` (Object, ProviderConfig) |
-| Current API version | `kubernetes.crossplane.io/v1alpha2` |
 
 ---
 
@@ -283,37 +231,13 @@ spec:
 |---|---|
 | Chart | `external-secrets` |
 | Repo | `https://charts.external-secrets.io` |
-| Pinned chart version | **0.4.4** |
-| Current stable | 0.10.x |
+| **Chart version** | **0.10.7** ✅ (upgraded from 0.4.4 in Phase 5) |
 | File | `repos/gitops-system/tools/external-secrets/external-secrets-release.yaml` |
 | Releases | https://github.com/external-secrets/external-secrets/releases |
-| Helm index | https://charts.external-secrets.io/index.yaml |
 
-### Critical: v1alpha1 API removed in ESO 0.9+
+### v1alpha1 API — RESOLVED ✅ (Phase 5)
 
-The repo uses `external-secrets.io/v1alpha1` for both `SecretStore` and `ExternalSecret`:
-
-- **File:** `repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml`
-
-```yaml
-# CURRENTLY IN REPO (broken on ESO >= 0.9)
-apiVersion: external-secrets.io/v1alpha1
-kind: SecretStore
----
-apiVersion: external-secrets.io/v1alpha1
-kind: ExternalSecret
-```
-
-**Required:**
-```yaml
-apiVersion: external-secrets.io/v1beta1
-kind: SecretStore
----
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-```
-
-**Migration guide:** https://external-secrets.io/latest/guides/upgrade-guide-0.9/
+Both `SecretStore` and `ExternalSecret` in `repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml` have been updated from `external-secrets.io/v1alpha1` to `external-secrets.io/v1beta1`.
 
 ---
 
@@ -325,24 +249,21 @@ kind: ExternalSecret
 |---|---|
 | Chart | `sealed-secrets` |
 | Repo | `https://bitnami-labs.github.io/sealed-secrets` |
-| Pinned chart version | **2.7.1** (controller v0.19.5) |
-| Current chart | 2.16.x (controller v0.27.x) |
+| **Chart version** | **2.16.2** ✅ (controller v0.27.x, upgraded from 2.7.1 in Phase 6) |
 | File | `repos/gitops-system/tools/sealed-secrets/sealed-secrets-release.yaml` |
 | Releases | https://github.com/bitnami-labs/sealed-secrets/releases |
-| Helm index | https://bitnami-labs.github.io/sealed-secrets/index.yaml |
 
-### CLI version coupling
-
-**The `kubeseal` CLI must match the controller version.** The setup script installs kubeseal v0.19.4, which matches chart 2.7.1 (controller v0.19.5). If the chart is upgraded without upgrading kubeseal, encryption will fail.
+### CLI version coupling — IN SYNC ✅
 
 ```
-chart 2.7.1  ↔  controller v0.19.5  ↔  kubeseal CLI v0.19.4  ✓ (compatible)
-chart 2.16.x ↔  controller v0.27.x  ↔  kubeseal CLI v0.27.x  (required after upgrade)
+chart 2.16.2  ↔  controller v0.27.x  ↔  kubeseal CLI v0.27.0  ✓ (in sync)
 ```
 
-### Re-sealing required on upgrade
+Both the chart (Phase 6) and the kubeseal CLI in the setup guide (Phase 3) were updated together. If the chart is upgraded again, the CLI must be updated to match.
 
-When the controller is upgraded to a new major version, existing SealedSecrets may need to be re-sealed if the keypair format changes. The keypair stored in AWS Secrets Manager (`sealed-secrets` secret) remains valid — only the controller binary changes.
+### Re-sealing note
+
+When the controller is upgraded to a new major version, existing SealedSecrets may need to be re-sealed if the keypair format changes. The keypair in AWS Secrets Manager (`sealed-secrets`) remains valid — only the controller binary changes.
 
 ---
 
@@ -354,50 +275,30 @@ When the controller is upgraded to a new major version, existing SealedSecrets m
 |---|---|
 | Chart | `karpenter` |
 | Repo | `oci://public.ecr.aws/karpenter` (OCI registry) |
-| Pinned chart version | **0.36.1** |
-| Current stable | 1.3.x |
+| **Chart version** | **1.3.1** ✅ (upgraded from 0.36.1 in Phase 8) |
 | File | `repos/gitops-system/tools/karpenter/karpenter-release.yaml` |
 | Releases | https://github.com/aws/karpenter-provider-aws/releases |
 | Docs | https://karpenter.sh |
 
-### Breaking API change: v0.x → v1.x
+### v1beta1 → v1 API migration — RESOLVED ✅ (Phase 8)
 
-Karpenter v1.0 was released in 2024. It introduces **breaking API changes**:
+| API | Status |
+|---|---|
+| `karpenter.sh/v1beta1` → `karpenter.sh/v1` | ✅ Updated in node-pool.yaml |
+| `karpenter.k8s.aws/v1beta1` → `karpenter.k8s.aws/v1` | ✅ Updated in node-pool.yaml, mgmt/karpenter-config.yaml, template/karpenter-config.yaml |
 
-| API in repo | v1.x API | Breaking |
-|---|---|---|
-| `karpenter.sh/v1beta1` → `NodePool` | `karpenter.sh/v1` | Yes |
-| `karpenter.k8s.aws/v1beta1` → `EC2NodeClass` | `karpenter.k8s.aws/v1` | Yes |
+### AL2 → AL2023 — RESOLVED ✅ (Phase 8)
 
-**Affected files:**
-- `repos/gitops-system/tools-config/karpenter-config/node-pool.yaml`
-- `repos/gitops-system/clusters/mgmt/karpenter-config.yaml` (inline patch)
-- `repos/gitops-system/clusters/template/karpenter-config.yaml` (inline patch)
+`amiFamily: AL2` updated to `amiFamily: AL2023` in `node-pool.yaml`. Amazon Linux 2 reaches end of support June 30, 2025.
 
-**Migration guide:** https://karpenter.sh/docs/upgrading/upgrade-guide/
-
-### Amazon Linux 2 (AL2) EOL
-
-The `EC2NodeClass` in `node-pool.yaml` uses `amiFamily: AL2`. Amazon Linux 2 reaches end of support **June 30, 2025**. Must migrate to `amiFamily: AL2023`.
-
-```yaml
-# CHANGE THIS
-spec:
-  amiFamily: AL2
-
-# TO THIS
-spec:
-  amiFamily: AL2023
-```
-
-### Hardcoded OIDC thumbprint in Crossplane composition
+### Hardcoded OIDC thumbprint (FP-3)
 
 In `tools-config/crossplane-eks-composition/composition.yaml`, the OIDC IdP resource hardcodes a thumbprint:
 ```yaml
 thumbprintList:
   - '9e99a48a9960b14926bb7f3b02e22da2b0ab7280'
 ```
-AWS now validates OIDC IdPs using the full certificate chain and no longer requires this thumbprint. However, the field is still required by the API — use the value `0000000000000000000000000000000000000000` as a placeholder, or fetch the actual current thumbprint dynamically. See: https://github.com/aws/containers-roadmap/issues/1864
+AWS now validates OIDC IdPs using the full certificate chain. The field is still required by the API — replace with `0000000000000000000000000000000000000000` or fetch dynamically. See: https://github.com/aws/containers-roadmap/issues/1864
 
 ---
 
@@ -409,18 +310,12 @@ AWS now validates OIDC IdPs using the full certificate chain and no longer requi
 |---|---|
 | Chart | `aws-load-balancer-controller` |
 | Repo | `https://aws.github.io/eks-charts` |
-| Pinned chart version | **1.4.6** |
-| Current stable | 1.11.x |
+| **Chart version** | **1.11.0** ✅ (upgraded from 1.4.6 in Phase 7) |
 | File | `repos/gitops-system/tools/aws-load-balancer-controller/aws-lb-controller-release.yaml` |
 | Releases | https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases |
-| Helm index | https://aws.github.io/eks-charts/index.yaml |
 | Docs | https://kubernetes-sigs.github.io/aws-load-balancer-controller/ |
 
-Chart version 1.4.6 corresponds to controller v2.4.x. Current is v2.12.x. Notable changes across that range:
-- IPv6 support added (v2.5)
-- Shield Advanced integration (v2.6)
-- NLB security group support (v2.7)
-- Various webhook and TLS hardening improvements
+Notable improvements since 1.4.6: IPv6 support (v2.5), Shield Advanced integration (v2.6), NLB security group support (v2.7), webhook and TLS hardening.
 
 ---
 
@@ -432,11 +327,9 @@ Chart version 1.4.6 corresponds to controller v2.4.x. Current is v2.12.x. Notabl
 |---|---|
 | Chart | `aws-ebs-csi-driver` |
 | Repo | `https://kubernetes-sigs.github.io/aws-ebs-csi-driver` |
-| Pinned chart version | **2.30.0** |
-| Current stable | 2.38.x |
+| **Chart version** | **2.38.1** ✅ (upgraded from 2.30.0 in Phase 7) |
 | File | `repos/gitops-system/tools/aws-ebs-csi/aws-ebs-csi-release.yaml` |
 | Releases | https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases |
-| Helm index | https://kubernetes-sigs.github.io/aws-ebs-csi-driver/index.yaml |
 
 ---
 
@@ -448,13 +341,12 @@ Chart version 1.4.6 corresponds to controller v2.4.x. Current is v2.12.x. Notabl
 |---|---|
 | Chart | `cost-analyzer` |
 | Repo | `oci://public.ecr.aws/kubecost` (OCI) |
-| Pinned chart version | **2.2.2** |
-| Current stable | 2.6.x |
+| **Chart version** | **2.6.0** ✅ (upgraded from 2.2.2 in Phase 7) |
 | File | `repos/gitops-system/tools/kubecost/kubecost-release.yaml` |
 | Releases | https://github.com/kubecost/cost-analyzer-helm-chart/releases |
 | Docs | https://docs.kubecost.com |
 
-All images are pulled from `public.ecr.aws/kubecost/*`. No image tag pinning — Helm chart controls image versions. The Kubecost `forecasting.fullImageName` explicitly pins `kubecost-modeling:v0.1.6` which may be stale.
+All images pulled from `public.ecr.aws/kubecost/*`. The `forecasting.fullImageName` explicitly pins `kubecost-modeling:v0.1.6` — review on next chart upgrade.
 
 ---
 
@@ -465,28 +357,23 @@ All images are pulled from `public.ecr.aws/kubecost/*`. No image tag pinning —
 | | Value |
 |---|---|
 | File | `initial-setup/config/mgmt-cluster-eksctl.yaml` |
-| K8s version | **1.29** |
+| **K8s version** | **1.31** ✅ (updated from 1.29 in Phase 2) |
 | Instance type | m5.large |
 | Node count | 3 |
 | Networking | Single NAT gateway |
-| EKS 1.29 support end | ~July 2025 |
 | EKS release calendar | https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html |
+
+**Note:** The config file is updated. The live cluster upgrade is an operational step (`eksctl upgrade cluster`).
 
 ### Workload Cluster Template
 
 | | Value |
 |---|---|
 | File | `repos/gitops-system/clusters-config/template/def/eks-cluster.yaml` |
-| Default `eks-k8s-version` | **1.28** |
-| Default `mng-k8s-version` | **1.28** |
-| EKS 1.28 support end | **November 2024 — already EOL** |
+| **Default `eks-k8s-version`** | **1.31** ✅ (updated from 1.28 in Phase 2) |
+| **Default `mng-k8s-version`** | **1.31** ✅ |
+| EKS 1.31 support end | ~late 2026 |
 | Instance type | m5.large (hardcoded in Composition) |
-
-**EKS 1.28 is EOL.** Workload clusters created from the default template will be on an unsupported Kubernetes version. Upgrade the template default to at minimum 1.31 (supported through late 2026).
-
-### CFN-based setup: allowed K8s versions
-
-The `initial-setup/auto/cfn.yaml` template only permits versions `1.27`, `1.28`, `1.29` — all now EOL or near-EOL. The `AllowedValues` must be updated before the CFN stack can be used to create new environments.
 
 ---
 
@@ -497,33 +384,32 @@ The `initial-setup/auto/cfn.yaml` template only permits versions `1.27`, `1.28`,
 - v1: `repos/apps/product-catalog-api/v1/`
 - v2: `repos/apps/product-catalog-api/v2/`
 
-### Container Base Image
+### Container Base Image — RESOLVED ✅ (Phase 1)
 
 | | Value |
 |---|---|
-| Base image | `python:3.9-slim` |
-| Python 3.9 EOL | **October 2025** |
-| Recommended | `python:3.12-slim` or `python:3.13-slim` |
+| **Base image** | **`python:3.12-slim`** ✅ (upgraded from `python:3.9-slim`) |
+| Python 3.12 EOL | October 2028 |
 | Python release schedule | https://devguide.python.org/versions/ |
 
 ### Python Dependencies (identical in v1 and v2)
 
-| Package | Pinned | Latest | Notes |
-|---|---|---|---|
-| `flask-restx` | 1.3.0 | 1.3.0 | OK |
-| `Flask` | 3.0.3 | 3.1.x | Minor update available |
-| `werkzeug` | 3.0.4 | 3.1.x | Minor update available |
-| `gunicorn` | 23.0.0 | 23.0.0 | OK |
-| `requests` | `v2.32.3` | 2.32.3 | **Invalid version format** — the `v` prefix causes pip to fail silently or error. Change to `requests==2.32.3` |
-| `flask-cors` | 4.0.2 | 5.0.x | Major version available |
-| `boto3` | 1.35.39 | 1.38.x | Update recommended |
-| `markupsafe` | 2.1.5 | 3.0.x | Major version available |
+| Package | Pinned | Notes |
+|---|---|---|
+| `flask-restx` | 1.3.0 | OK |
+| `Flask` | 3.0.3 | Minor update available (3.1.x) |
+| `werkzeug` | 3.0.4 | Minor update available (3.1.x) |
+| `gunicorn` | 23.0.0 | OK |
+| `requests` | `2.32.3` ✅ | Fixed — invalid `v` prefix removed (Phase 1) |
+| `flask-cors` | 4.0.2 | Major version available (5.0.x) |
+| `boto3` | 1.35.39 | Update recommended (1.38.x) |
+| `markupsafe` | 2.1.5 | Major version available (3.0.x) |
 
 ### Kubernetes Manifests
 
 - Base: `repos/apps-manifests/product-catalog-api-manifests/v1/kubernetes/base/`
 - Overlays: `staging/`, `prod/`
-- v2 staging adds a Crossplane `infra.yaml` for DynamoDB provisioning
+- v2 staging adds a Crossplane `infra.yaml` for DynamoDB provisioning (`dynamodb.aws.crossplane.io/v1alpha1` — affected by FP-1)
 
 ---
 
@@ -533,95 +419,89 @@ The `initial-setup/auto/cfn.yaml` template only permits versions `1.27`, `1.28`,
 
 `repos/apps/product-catalog-fe/`
 
-### Container Base Image
+### Container Base Image — RESOLVED ✅ (Phase 1)
 
 | | Value |
 |---|---|
-| Base image | `node:14` |
-| Node.js 14 EOL | **April 30, 2023 — CRITICAL** |
-| Recommended | `node:22-slim` (LTS) or `node:20-slim` |
+| **Base image** | **`node:22-slim`** ✅ (upgraded from EOL `node:14`) |
+| Node.js 22 LTS EOL | April 2027 |
 | Node.js release schedule | https://nodejs.org/en/about/previous-releases |
-
-This is a hard security risk — Node.js 14 has received no security patches since April 2023.
 
 ### Node.js Dependencies (`package.json`)
 
-| Package | Pinned range | Latest | Notes |
-|---|---|---|---|
-| `express` | ^4.21.1 | 5.x | Express 5 is stable since late 2024 — breaking changes |
-| `axios` | ^1.7.4 | 1.8.x | Minor update available |
-| `ejs` | ^3.1.10 | 3.1.10 | OK |
-| `body-parser` | ^1.20.3 | — | **Redundant** — `body-parser` is bundled in Express 4.16+; use `express.json()` and `express.urlencoded()` instead |
-| `prom-client` | ^14.0.1 | 15.x | Major version available |
-| `nodemon` (dev) | ^2.0.18 | 3.x | Major version available; dev-only, low priority |
+| Package | Pinned range | Notes |
+|---|---|---|
+| `express` | ^4.21.1 | Express 5 is stable — breaking changes if upgrading |
+| `axios` | ^1.7.4 | Minor update available (1.8.x) |
+| `ejs` | ^3.1.10 | OK |
+| `body-parser` | removed ✅ | Redundant with Express 4.16+ — removed in Phase 1; using `express.urlencoded()` |
+| `prom-client` | ^14.0.1 | Major version available (15.x) |
+| `nodemon` (dev) | ^2.0.18 | Major version available (3.x) — dev-only, low priority |
 
 ---
 
 ## 15. Deprecated Kubernetes API Versions
 
-Complete list of deprecated/removed API versions found across all manifests:
-
-| apiVersion in repo | Correct apiVersion | Deprecated | Removed |
-|---|---|---|---|
-| `helm.toolkit.fluxcd.io/v2beta1` | `helm.toolkit.fluxcd.io/v2` | Flux 2.3 | Not yet announced — fix proactively |
-| `source.toolkit.fluxcd.io/v1beta2` | `source.toolkit.fluxcd.io/v1` | Flux 2.0 | Not yet announced — fix proactively |
-| `kustomize.toolkit.fluxcd.io/v1beta2` | `kustomize.toolkit.fluxcd.io/v1` | Flux 2.0 | Not yet announced — fix proactively |
-| `external-secrets.io/v1alpha1` | `external-secrets.io/v1beta1` | ESO 0.8 | **ESO 0.9** |
-| `karpenter.sh/v1beta1` | `karpenter.sh/v1` | Karpenter 0.37 | **Karpenter 1.0** |
-| `karpenter.k8s.aws/v1beta1` | `karpenter.k8s.aws/v1` | Karpenter 0.37 | **Karpenter 1.0** |
-| `pkg.crossplane.io/v1alpha1` (ControllerConfig) | `pkg.crossplane.io/v1beta1` (DeploymentRuntimeConfig) | Crossplane 1.14 | **Crossplane 1.17** |
-| `kubernetes.crossplane.io/v1alpha1` | `kubernetes.crossplane.io/v1alpha2` | provider-k8s 0.10 | — |
-| `ec2.aws.crossplane.io/v1beta1` | `ec2.aws.upbound.io/v1beta1` | provider-aws archived | — |
-| `eks.aws.crossplane.io/v1beta1` | `eks.aws.upbound.io/v1beta1` | provider-aws archived | — |
-| `iam.aws.crossplane.io/v1beta1` | `iam.aws.upbound.io/v1beta1` | provider-aws archived | — |
+| apiVersion in repo | Correct apiVersion | Status |
+|---|---|---|
+| `helm.toolkit.fluxcd.io/v2beta1` | `helm.toolkit.fluxcd.io/v2` | ✅ Resolved — Phase 4 |
+| `source.toolkit.fluxcd.io/v1beta2` | `source.toolkit.fluxcd.io/v1` | ✅ Resolved — Phase 4 |
+| `kustomize.toolkit.fluxcd.io/v1beta2` | `kustomize.toolkit.fluxcd.io/v1` | ✅ Resolved — Phase 4 |
+| `external-secrets.io/v1alpha1` | `external-secrets.io/v1beta1` | ✅ Resolved — Phase 5 |
+| `karpenter.sh/v1beta1` | `karpenter.sh/v1` | ✅ Resolved — Phase 8 |
+| `karpenter.k8s.aws/v1beta1` | `karpenter.k8s.aws/v1` | ✅ Resolved — Phase 8 |
+| `pkg.crossplane.io/v1alpha1` (ControllerConfig) | `pkg.crossplane.io/v1beta1` (DeploymentRuntimeConfig) | ✅ Resolved — Phase 9 |
+| `kubernetes.crossplane.io/v1alpha1` | `kubernetes.crossplane.io/v1alpha2` | Open — low priority |
+| `ec2.aws.crossplane.io/v1beta1` | `ec2.aws.upbound.io/v1beta1` | Open — FP-1 (full composition rewrite) |
+| `eks.aws.crossplane.io/v1beta1` | `eks.aws.upbound.io/v1beta1` | Open — FP-1 |
+| `iam.aws.crossplane.io/v1beta1` | `iam.aws.upbound.io/v1beta1` | Open — FP-1 |
 
 ---
 
 ## 16. Deprecated Crossplane Constructs
 
-### ControllerConfig (deprecated, will be removed)
+### ControllerConfig — RESOLVED ✅ (Phase 9)
 
-`ControllerConfig` (`pkg.crossplane.io/v1alpha1`) is deprecated since Crossplane 1.14 and removed in 1.17+. Replaced by `DeploymentRuntimeConfig` (`pkg.crossplane.io/v1beta1`).
+Both providers now use `DeploymentRuntimeConfig` (`pkg.crossplane.io/v1beta1`):
+- `aws-provider.yaml`: `controllerConfigRef` → `runtimeConfigRef` ✅
+- `k8s-provider.yaml`: same migration ✅
+- `clusters/template/crossplane.yaml`: patch target updated to `DeploymentRuntimeConfig/v1beta1` ✅
 
-Files to update:
-- `repos/gitops-system/tools/crossplane/crossplane-aws-provider/aws-provider.yaml`
-- `repos/gitops-system/tools/crossplane/crossplane-k8s-provider/k8s-provider.yaml`
+### Composition patchSets
 
-### Composition patchSets with `type: ToCompositeFieldPath`
-
-The existing Composition in `tools-config/crossplane-eks-composition/composition.yaml` uses the v1 `patchSets` syntax. This is still valid in Crossplane 1.15+, but review against [Composition Functions](https://docs.crossplane.io/latest/guides/function-based-composition/) if planning a significant refactor — Functions replace pipelines-style patches in modern Crossplane.
+`tools-config/crossplane-eks-composition/composition.yaml` uses the v1 `patchSets` syntax. Still valid in Crossplane 1.19. Review against [Composition Functions](https://docs.crossplane.io/latest/guides/function-based-composition/) if planning a significant refactor.
 
 ### k8s-provider-config Job grants cluster-admin
 
-The CronJob/Job in `crossplane-k8s-provider-config/k8s-providerconfig.yaml` grants `cluster-admin` to the Kubernetes provider's service account dynamically. This is a known workaround for provider-kubernetes RBAC bootstrapping. Review whether `provider-kubernetes` v0.14+ resolves this without a CronJob workaround.
+The CronJob/Job in `crossplane-k8s-provider-config/k8s-providerconfig.yaml` grants `cluster-admin` to the Kubernetes provider's service account dynamically. Known workaround for provider-kubernetes RBAC bootstrapping. Review whether provider-kubernetes v0.16 resolves this without a CronJob workaround.
 
 ---
 
 ## 17. Upgrade Priority Matrix
 
-| Priority | Component | Issue | Risk if not addressed |
+| Priority | Component | Issue | Status |
 |---|---|---|---|
-| **P0 — Immediate** | product-catalog-fe Node.js 14 | EOL April 2023, no security patches | Active security vulnerabilities |
-| **P0 — Immediate** | EKS workload clusters K8s 1.28 | EOL November 2024 | Unsupported, no patches |
-| **P0 — Immediate** | External Secrets Operator 0.4.4 | `v1alpha1` API removed in ESO 0.9 | Sealed Secrets key injection fails on upgrade |
-| **P1 — Short term** | Crossplane `crossplane-contrib/provider-aws` | Monolithic provider archived | No bug fixes, no new AWS service support |
-| **P1 — Short term** | Karpenter 0.36.1 → 1.x | v1beta1 API removed, AL2 EOL June 2025 | Node provisioning breaks post-upgrade |
-| **P1 — Short term** | `ControllerConfig` → `DeploymentRuntimeConfig` | Removed in Crossplane 1.17 | Crossplane upgrade blocked |
-| **P1 — Short term** | EKS management cluster K8s 1.29 | EOL ~July 2025 | Unsupported cluster |
-| **P2 — Medium term** | FluxCD v2.1.2 → v2.5.x | API deprecations accumulate | Kustomization/HelmRelease drift |
-| **P2 — Medium term** | Flux API versions (v1beta2→v1, etc.) | Will be removed in future Flux version | Bootstrap breaks on Flux upgrade |
-| **P2 — Medium term** | Python 3.9 base image | EOL October 2025 | Security vulnerabilities |
-| **P2 — Medium term** | `requests==v2.32.3` (invalid format) | Pip may error or install wrong version | Silent dependency failure |
-| **P2 — Medium term** | kubectl in setup script (1.24.7) | Cannot communicate with 1.28+ clusters | CLI errors, skewed API calls |
-| **P3 — Low** | Crossplane provider-kubernetes 0.13.0 | Minor version lag | Missing features, possible minor bugs |
-| **P3 — Low** | AWS LB Controller chart 1.4.6 | 7 minor versions behind | Missing features (IPv6, Shield) |
-| **P3 — Low** | AWS EBS CSI chart 2.30.0 | Minor lag | Minor bug fixes missed |
-| **P3 — Low** | Kubecost 2.2.2 | Minor lag | Missing cost model improvements |
-| **P3 — Low** | Node.js `body-parser` package | Redundant with Express 4.16+ | Code bloat |
-| **P3 — Low** | kubeseal v0.19.4 | Must stay in sync with chart 2.7.1 | Only a risk if Sealed Secrets chart is upgraded without upgrading CLI |
-| **P3 — Low** | AL2 amiFamily in Karpenter NodePool | EOL June 2025 | Karpenter stops finding valid AMIs |
-| **P3 — Low** | OIDC thumbprint hardcoded in Composition | AWS changed validation method | May cause OIDC provider creation errors |
-| **P3 — Low** | `bitnami/kubectl:1.22.11` in k8s-config Job | K8s 1.22 EOL | kubectl API skew errors |
+| **P0** | product-catalog-fe Node.js 14 | EOL April 2023 | ✅ **RESOLVED** — Phase 1 → node:22-slim |
+| **P0** | EKS workload clusters K8s 1.28 | EOL November 2024 | ✅ **RESOLVED** — Phase 2 → 1.31 template |
+| **P0** | External Secrets Operator 0.4.4 | v1alpha1 API removed in ESO 0.9 | ✅ **RESOLVED** — Phase 5 → 0.10.7 + v1beta1 |
+| **P1** | Crossplane `crossplane-contrib/provider-aws` | Monolithic provider archived | Open — **FP-1** (architectural rewrite) |
+| **P1** | Karpenter 0.36.1 → 1.x | v1beta1 API removed, AL2 EOL Jun 2025 | ✅ **RESOLVED** — Phase 8 → 1.3.1 + v1 APIs + AL2023 |
+| **P1** | `ControllerConfig` → `DeploymentRuntimeConfig` | Removed in Crossplane 1.17 | ✅ **RESOLVED** — Phase 9 |
+| **P1** | EKS management cluster K8s 1.29 | EOL ~July 2025 | ✅ **RESOLVED** — Phase 2 template → 1.31 (live upgrade is operational) |
+| **P2** | FluxCD v2.1.2 → v2.5.x | API deprecations accumulate | Open — **FP-2** (requires live bootstrap) |
+| **P2** | Flux API versions (v1beta2→v1, etc.) | Will be removed in future Flux version | ✅ **RESOLVED** — Phase 4 (51 files) |
+| **P2** | Python 3.9 base image | EOL October 2025 | ✅ **RESOLVED** — Phase 1 → python:3.12-slim |
+| **P2** | `requests==v2.32.3` (invalid format) | Pip rejects leading `v` | ✅ **RESOLVED** — Phase 1 → `requests==2.32.3` |
+| **P2** | kubectl in setup script (1.24.7) | Cannot communicate with 1.31 clusters | ✅ **RESOLVED** — Phase 3 → 1.31.0 |
+| **P3** | provider-kubernetes 0.13.0 | Minor version lag | ✅ **RESOLVED** — Phase 9 → v0.16.0 |
+| **P3** | AWS LB Controller chart 1.4.6 | 7 minor versions behind | ✅ **RESOLVED** — Phase 7 → 1.11.0 |
+| **P3** | AWS EBS CSI chart 2.30.0 | Minor lag | ✅ **RESOLVED** — Phase 7 → 2.38.1 |
+| **P3** | Kubecost 2.2.2 | Minor lag | ✅ **RESOLVED** — Phase 7 → 2.6.0 |
+| **P3** | `body-parser` package | Redundant with Express 4.16+ | ✅ **RESOLVED** — Phase 1 → express.urlencoded() |
+| **P3** | kubeseal v0.19.4 | Must sync with Sealed Secrets chart | ✅ **RESOLVED** — Phase 3+6 → v0.27.0 (in sync with chart 2.16.2) |
+| **P3** | AL2 amiFamily in Karpenter NodePool | EOL June 2025 | ✅ **RESOLVED** — Phase 8 → AL2023 |
+| **P3** | OIDC thumbprint hardcoded in Composition | AWS changed validation method | Open — **FP-3** |
+| **P3** | `bitnami/kubectl:1.22.11` in k8s-config Job | K8s 1.22 EOL | ✅ **RESOLVED** — Phase 9 → bitnami/kubectl:1.31 |
 
 ---
 
@@ -646,10 +526,10 @@ helm repo add eks https://aws.github.io/eks-charts
 helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
 
 # Karpenter (OCI — no repo add required)
-# helm install karpenter oci://public.ecr.aws/karpenter/karpenter --version <version>
+# helm install karpenter oci://public.ecr.aws/karpenter/karpenter --version 1.3.1
 
 # Kubecost (OCI — no repo add required)
-# helm install kubecost oci://public.ecr.aws/kubecost/cost-analyzer --version <version>
+# helm install kubecost oci://public.ecr.aws/kubecost/cost-analyzer --version 2.6.0
 
 helm repo update
 ```
@@ -657,7 +537,7 @@ helm repo update
 ### Crossplane Provider Packages (OCI)
 
 ```bash
-# Current monolithic provider (ARCHIVED — do not use for new deployments)
+# Current monolithic provider (ARCHIVED — FP-1: migrate to Upbound family)
 # xpkg.upbound.io/crossplane-contrib/provider-aws:v0.47.1
 
 # Recommended: Upbound official family providers
@@ -667,7 +547,7 @@ helm repo update
 # xpkg.upbound.io/upbound/provider-aws-iam:<version>
 
 # Kubernetes provider
-# xpkg.upbound.io/crossplane-contrib/provider-kubernetes:<version>
+# xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.16.0
 ```
 
 ### GitHub Releases
@@ -688,11 +568,11 @@ helm repo update
 
 ### Container Base Images
 
-| Image | Recommended tag | Registry |
+| Image | Tag | Registry |
 |---|---|---|
-| Python API | `python:3.12-slim` | https://hub.docker.com/_/python |
-| Node.js frontend | `node:22-slim` | https://hub.docker.com/_/node |
-| kubectl utility | `bitnami/kubectl:1.29` | https://hub.docker.com/r/bitnami/kubectl |
+| Python API | `python:3.12-slim` ✅ | https://hub.docker.com/_/python |
+| Node.js frontend | `node:22-slim` ✅ | https://hub.docker.com/_/node |
+| kubectl utility | `bitnami/kubectl:1.31` ✅ | https://hub.docker.com/r/bitnami/kubectl |
 
 ### EKS AMI / K8s Versions
 
@@ -702,4 +582,35 @@ helm repo update
 
 ---
 
-*Generated by analysis of all manifests, Dockerfiles, and requirements files in the repository. Verify all "current stable" version numbers before applying — this document reflects state as of 2026-04-27.*
+## 19. Future Projects
+
+These items were scoped out of the Phase 1–9 modernization plan. Each requires either live cluster access or a significant architectural change.
+
+### FP-1: crossplane-contrib/provider-aws → Upbound family providers
+
+**Scope:** The monolithic archived provider must be replaced with Upbound official family providers (`provider-aws-ec2`, `provider-aws-eks`, `provider-aws-iam`). Every resource in `tools-config/crossplane-eks-composition/composition.yaml` changes API group from `*.aws.crossplane.io` to `*.aws.upbound.io`. The DynamoDB resource in `repos/apps-manifests/product-catalog-api-manifests/v2-staging/kubernetes/overlays/staging/infra.yaml` is also affected. This involves rewriting 50+ managed resource definitions and migrating live cluster state without destroying infrastructure.
+
+**Risk:** High — requires coordination with live clusters and careful state migration.
+
+### FP-2: FluxCD upgrade (gotk-components.yaml regeneration)
+
+**Scope:** `gotk-components.yaml` is pinned at FluxCD v2.1.2 and must NOT be manually edited. To upgrade, re-run `flux bootstrap` against the gitops-system repo with a newer Flux CLI. Requires live management cluster access.
+
+**Command:**
+```bash
+flux bootstrap github \
+  --owner=<org> \
+  --repository=gitops-system \
+  --branch=main \
+  --path=clusters/mgmt
+```
+
+### FP-3: Crossplane Composition — OIDC thumbprint
+
+**Scope:** The hardcoded thumbprint `9e99a48a9960b14926bb7f3b02e22da2b0ab7280` in `composition.yaml` is no longer required by AWS but the field is still mandatory in the API. Replace with `0000000000000000000000000000000000000000` as a neutral placeholder, or automate thumbprint fetching during cluster provisioning.
+
+**Reference:** https://github.com/aws/containers-roadmap/issues/1864
+
+---
+
+*Original analysis: 2026-04-27. Updated: 2026-04-28 to reflect Phases 1–9 completion. Verify all version numbers before applying — package ecosystems move fast.*
