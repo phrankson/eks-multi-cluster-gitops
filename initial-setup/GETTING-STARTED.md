@@ -480,9 +480,17 @@ sed -i '' "s/AWS_REGION/$AWS_REGION/g" \
 
 ### Update Git repository URLs
 
-**What `REPO_PREFIX` is:** The manifests contain placeholder `REPO_PREFIX` where the actual Git URL prefix should go. For GitHub it looks like `https://github.com/your-org`. The `sed` commands below stamp your actual URL into every `GitRepository` manifest so Flux knows where to pull from.
+**What this does:** Four YAML files contain the literal placeholder text `REPO_PREFIX` where your GitHub SSH URL should go. This `sed` command replaces every occurrence with your actual value (e.g. `ssh://git@github.com/phrankson`) so Flux knows where to pull your repos from. Without this step, Flux would try to connect to a URL literally named `REPO_PREFIX`.
 
-Verify it is set first:
+The four files updated are the Flux `GitRepository` manifests — the ones that tell Flux which GitHub repos to watch:
+- `gitops-system/workloads/template/git-repo.yaml`
+- `gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml`
+- `gitops-system/clusters/template/flux-system/gotk-sync.yaml`
+- `gitops-workloads/template/app-template/git-repo.yaml`
+
+> **Why `~` instead of `/`?** The replacement value contains `/` characters (it's a URL path). Using `~` as the sed delimiter avoids a conflict with those slashes.
+
+Verify `REPO_PREFIX` is set first:
 ```bash
 echo "REPO_PREFIX: $REPO_PREFIX"
 ```
