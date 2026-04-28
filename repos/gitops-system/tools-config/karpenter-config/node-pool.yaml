@@ -42,7 +42,7 @@ spec:
   role: karpenter-node-role
   subnetSelectorTerms:
     - tags:
-        Name: "eks-vpc-private*"
+        Name: "eksctl-mgmt-cluster/SubnetPrivate*"
   securityGroupSelectorTerms:
     - tags:
         kubernetes.io/cluster/${CLUSTER_NAME}: owned
