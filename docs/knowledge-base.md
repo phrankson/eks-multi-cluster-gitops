@@ -39,7 +39,7 @@
 | Infrastructure controller | Crossplane | v1.19.2 | ✅ Updated (Phase 9) |
 | AWS provider (Crossplane) | crossplane-contrib/provider-aws | v0.47.1 | Open — FP-1 (archived, major rewrite required) |
 | K8s provider (Crossplane) | crossplane-contrib/provider-kubernetes | v0.16.0 | ✅ Updated (Phase 9) |
-| Secrets (Git) | Sealed Secrets | chart 2.16.2 | ✅ Updated (Phase 6) |
+| Secrets (Git) | Sealed Secrets | chart 2.18.5 | ✅ Updated (Phase 6) |
 | Secrets (AWS SM) | External Secrets Operator | chart 0.10.7 | ✅ Updated (Phase 5) |
 | Node autoscaler | Karpenter | chart 1.3.1 | ✅ Updated (Phase 8) |
 | Load balancer | AWS Load Balancer Controller | chart 1.11.0 | ✅ Updated (Phase 7) |
@@ -78,9 +78,9 @@ Versions are pinned in `initial-setup/README.md`. All updated in Phase 3.
 ### kubeseal
 | | Value |
 |---|---|
-| **Current pinned version** | **v0.27.0** ✅ |
-| Download | `https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.27.0/kubeseal-0.27.0-linux-amd64.tar.gz` |
-| Matches chart | 2.16.2 (controller v0.27.x) ✅ |
+| **Current pinned version** | **v0.36.6** ✅ |
+| Download | `https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-linux-amd64.tar.gz` |
+| Matches chart | 2.18.5 (controller v0.36.x) ✅ |
 | **CRITICAL** | kubeseal CLI version must always match the Sealed Secrets controller chart version. |
 
 ### eksctl
@@ -249,14 +249,14 @@ Both `SecretStore` and `ExternalSecret` in `repos/gitops-system/tools-config/ext
 |---|---|
 | Chart | `sealed-secrets` |
 | Repo | `https://bitnami-labs.github.io/sealed-secrets` |
-| **Chart version** | **2.16.2** ✅ (controller v0.27.x, upgraded from 2.7.1 in Phase 6) |
+| **Chart version** | **2.18.5** ✅ (controller v0.36.x, upgraded from 2.7.1 in Phase 6) |
 | File | `repos/gitops-system/tools/sealed-secrets/sealed-secrets-release.yaml` |
 | Releases | https://github.com/bitnami-labs/sealed-secrets/releases |
 
 ### CLI version coupling — IN SYNC ✅
 
 ```
-chart 2.16.2  ↔  controller v0.27.x  ↔  kubeseal CLI v0.27.0  ✓ (in sync)
+chart 2.18.5  ↔  controller v0.36.x  ↔  kubeseal CLI v0.36.6  ✓ (in sync)
 ```
 
 Both the chart (Phase 6) and the kubeseal CLI in the setup guide (Phase 3) were updated together. If the chart is upgraded again, the CLI must be updated to match.
@@ -498,7 +498,7 @@ The CronJob/Job in `crossplane-k8s-provider-config/k8s-providerconfig.yaml` gran
 | **P3** | AWS EBS CSI chart 2.30.0 | Minor lag | ✅ **RESOLVED** — Phase 7 → 2.38.1 |
 | **P3** | Kubecost 2.2.2 | Minor lag | ✅ **RESOLVED** — Phase 7 → 2.6.0 |
 | **P3** | `body-parser` package | Redundant with Express 4.16+ | ✅ **RESOLVED** — Phase 1 → express.urlencoded() |
-| **P3** | kubeseal v0.19.4 | Must sync with Sealed Secrets chart | ✅ **RESOLVED** — Phase 3+6 → v0.27.0 (in sync with chart 2.16.2) |
+| **P3** | kubeseal v0.19.4 | Must sync with Sealed Secrets chart | ✅ **RESOLVED** — Phase 3+6 → v0.36.6 (in sync with chart 2.18.5) |
 | **P3** | AL2 amiFamily in Karpenter NodePool | EOL June 2025 | ✅ **RESOLVED** — Phase 8 → AL2023 |
 | **P3** | OIDC thumbprint hardcoded in Composition | AWS changed validation method | Open — **FP-3** |
 | **P3** | `bitnami/kubectl:1.22.11` in k8s-config Job | K8s 1.22 EOL | ✅ **RESOLVED** — Phase 9 → bitnami/kubectl:1.31 |
