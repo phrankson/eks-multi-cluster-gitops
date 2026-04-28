@@ -4,13 +4,14 @@ kind: DeploymentRuntimeConfig
 metadata:
   name: aws-config
 spec:
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role
   deploymentTemplate:
     spec:
       selector: {}
       template:
-        metadata:
-          annotations:
-            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role
         spec:
           containers:
           - name: package-runtime
