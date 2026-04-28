@@ -366,7 +366,16 @@ export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt)
 export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
 export CLUSTER_NAME=mgmt
 export CLUSTER_NAME_PSUEDO=mgmt
+export OIDC_PROVIDER=$(aws eks describe-cluster --name mgmt --region $AWS_REGION \
+  --query 'cluster.identity.oidc.issuer' --output text | sed 's|https://||')
+echo "OIDC_PROVIDER: $OIDC_PROVIDER"
 ```
+
+> **Why `OIDC_PROVIDER` must be set here:** The EKS cluster creates a unique OIDC identity provider at creation time. Its URL is used in two places:
+> 1. The `crossplane-role` trust policy (rendered by `envsubst` in the next step) — so Crossplane's service account can assume the role via IRSA.
+> 2. The `cluster-info` ConfigMap (a few steps below) — so Flux can substitute `${OIDC_PROVIDER}` into the Karpenter IAM role trust policy at reconciliation time.
+>
+> If you skip this step, both trust policies are created with an empty OIDC condition, causing `AccessDenied` errors when Crossplane and Karpenter try to call AWS APIs.
 
 ### Create the Crossplane IAM role
 
@@ -415,7 +424,8 @@ kubectl create configmap cluster-info -n flux-system \
   --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
   --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
   --from-literal=CLUSTER_NAME=${CLUSTER_NAME} \
-  --from-literal=CLUSTER_NAME_PSUEDO=${CLUSTER_NAME}
+  --from-literal=CLUSTER_NAME_PSUEDO=${CLUSTER_NAME} \
+  --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER}
 ```
 
 ---
@@ -699,22 +709,30 @@ sealed-secrets                   True    Applied revision: main@sha1:...
 
 **Timeline:** 20–40 minutes on first run. Most of this is Crossplane provisioning IAM roles in AWS — it cannot be rushed.
 
-### If `karpenter-config` stays `False` after 10 minutes
+### Required: manually apply `karpenter-node-role` to break the bootstrap race condition
 
-This kustomization contains both the Karpenter `NodePool` and the Crossplane `Role` for `karpenter-node-role`. If Crossplane has not finished creating the role yet, Karpenter's `EC2NodeClass` cannot validate and the kustomization fails. Apply the role manually to break the cycle:
+This step is **always required** on every fresh bootstrap — it is not a troubleshooting step.
+
+**Why:** `karpenter-config` applies the Karpenter `NodePool` and the Crossplane `Role` for `karpenter-node-role` together. Crossplane needs to be fully running before it can create the IAM role, but `karpenter-config` times out waiting for the `EC2NodeClass` (which needs the role). This circular dependency means `karpenter-config` will never self-heal — you must manually apply the role once to break the cycle:
 
 ```bash
 kubectl apply -f $GITOPS_HOME/eks-multi-cluster-gitops/repos/gitops-system/tools-config/karpenter-config/role.yaml
 ```
 
-Then wait for Crossplane to sync it:
+Wait for Crossplane to sync it to AWS:
 
 ```bash
 until kubectl get role.iam.aws.crossplane.io karpenter-node-role \
   -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q True; do
   echo "Waiting for karpenter-node-role..."; sleep 10
 done
-echo "Ready — karpenter-config will reconcile on the next Flux interval"
+echo "karpenter-node-role is ready — karpenter-config will reconcile on the next Flux interval"
+```
+
+Then force Flux to retry immediately:
+
+```bash
+flux reconcile kustomization karpenter-config
 ```
 
 ---
