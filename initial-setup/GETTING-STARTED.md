@@ -112,10 +112,11 @@ echo "Console : $EKS_CONSOLE_IAM_ENTITY_ARN"
 # macOS
 brew install kubectl
 
-# Linux (pinned to EKS 1.31 — must be within one minor version of the cluster)
-sudo curl --silent --location -o /usr/local/bin/kubectl \
-   https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.0/2024-09-12/bin/linux/amd64/kubectl
-sudo chmod +x /usr/local/bin/kubectl
+# Linux (pinned to EKS 1.35 — must be within one minor version of the cluster;
+# see https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html for the
+# exact AWS-published binary/date for your platform)
+curl -LO "https://dl.k8s.io/release/v1.35.0/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 ```
 
 Verify: `kubectl version --client`
@@ -185,7 +186,7 @@ Authenticate: `gh auth login`
 brew install eksctl
 
 # Linux
-curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.229.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
 sudo mv /tmp/eksctl /usr/local/bin
 ```
 
@@ -293,7 +294,7 @@ aws secretsmanager create-secret \
 **Why eksctl and not Terraform/CDK:** `eksctl` is the official EKS provisioning CLI maintained by AWS. For a single one-time cluster creation it is the lowest-friction option. Workload clusters are provisioned differently — by Crossplane, declaratively, via Git.
 
 **What the config file sets up:**
-- `version: "1.31"` — Kubernetes version (must be current to use modern Karpenter v1 APIs)
+- `version: "1.35"` — Kubernetes version (must be current to use modern Karpenter v1 APIs)
 - `iam.withOIDC: true` — creates an OIDC identity provider, required for Pod Identity and IRSA
 - `vpc.nat.gateway: Single` — one NAT Gateway to reduce cost for the management cluster
 - `privateNetworking: true` — nodes live in private subnets; only the API server is public

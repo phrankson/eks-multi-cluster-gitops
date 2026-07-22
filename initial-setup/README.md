@@ -62,16 +62,17 @@ echo "Platform: $OS/$ARCH"
 
 ### kubectl
 
+Pin kubectl to match the target EKS control-plane version (**1.35.x** — see [AWS's EKS-optimized kubectl builds](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html) for the exact AWS-published binary/date for your platform, or use the upstream build below).
+
 ```bash
-# Linux (amd64)
-sudo curl --silent --location -o /usr/local/bin/kubectl \
-   https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.0/2024-09-12/bin/linux/amd64/kubectl
-sudo chmod +x /usr/local/bin/kubectl
+# Linux (amd64) - upstream build, matches 1.35.x
+curl -LO "https://dl.k8s.io/release/v1.35.0/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # macOS (Homebrew)
 brew install kubectl
 # or pin to the EKS-matched version:
-# curl -LO "https://dl.k8s.io/release/v1.31.0/bin/darwin/$(uname -m)/kubectl"
+# curl -LO "https://dl.k8s.io/release/v1.35.0/bin/darwin/$(uname -m)/kubectl"
 # sudo install -m 755 kubectl /usr/local/bin/kubectl
 ```
 
@@ -127,14 +128,14 @@ Authenticate: `gh auth login`
 
 ```bash
 # Linux (amd64)
-curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.229.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
 sudo mv /tmp/eksctl /usr/local/bin
 
 # macOS
 brew tap weaveworks/tap
 brew install weaveworks/tap/eksctl
 # or direct download:
-# curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Darwin_arm64.tar.gz" | tar xz -C /tmp
+# curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.229.0/eksctl_Darwin_arm64.tar.gz" | tar xz -C /tmp
 # sudo mv /tmp/eksctl /usr/local/bin
 ```
 

@@ -5,7 +5,7 @@ kind: ClusterConfig
 metadata:
   name: mgmt
   region: AWS_REGION
-  version: "1.31"
+  version: "1.35"
 
 iam:
   withOIDC: true
@@ -13,6 +13,11 @@ iam:
 vpc:
   nat:
     gateway: Single
+
+addons:
+  - name: vpc-cni
+  - name: coredns
+  - name: kube-proxy
 
 managedNodeGroups:
 - name: nodegroup
