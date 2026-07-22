@@ -53,8 +53,8 @@ Most operate only on **local clones** of `gitops-system` / `gitops-workloads` an
 
 ## Sample applications (`repos/apps/`)
 
-- `product-catalog-api` — Python/Flask (`flask-restx`, gunicorn), has `v1/` and `v2/` variants; `v2` adds Crossplane-provisioned DynamoDB (see its manifests overlay). `python:3.12-slim` base image.
-- `product-catalog-fe` — Node/Express frontend (`node:22-slim` base image), calls the API.
+- `product-catalog-api` — Python/Flask (`flask-restx`, gunicorn), has `v1/` and `v2/` source variants (only `v1` currently has a deployable manifests overlay under `repos/apps-manifests/`). `python:3.13-slim` base image.
+- `product-catalog-fe` — Node/Express frontend (`node:24-slim` base image), calls the API.
 
 These exist purely to demonstrate the GitOps flow end-to-end; changes here should stay minimal/illustrative rather than production-grade.
 
