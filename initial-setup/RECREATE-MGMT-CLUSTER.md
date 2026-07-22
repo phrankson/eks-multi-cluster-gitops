@@ -200,7 +200,6 @@ eksctl create iamidentitymapping \
 export CLUSTER_NAME=mgmt
 
 flux bootstrap github \
-  --components-extra=image-reflector-controller,image-automation-controller \
   --owner=$GITHUB_ACCOUNT \
   --namespace=flux-system \
   --repository=gitops-system \

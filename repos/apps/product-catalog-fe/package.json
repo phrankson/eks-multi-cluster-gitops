@@ -10,12 +10,12 @@
   "author": "Praseeda Sathaye",
   "license": "MIT-0",
   "dependencies": {
-    "axios": "^1.7.4",
-    "ejs": "^3.1.10",
-    "express": "^4.21.1",
-    "prom-client": "^14.0.1"
+    "axios": "^1.18.1",
+    "ejs": "^6.0.1",
+    "express": "^4.22.2",
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.18"
+    "nodemon": "^3.1.14"
   }
 }

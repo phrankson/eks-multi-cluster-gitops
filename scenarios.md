@@ -32,11 +32,11 @@ In this section you will create a new workload cluster called `commercial-stagin
 `gitops-system`, and update `clusters-config/kustomization.yaml` Once done, you then push the
 changes so that flux can pick them up and act on them.
 
-You can make the required changes quickly using the script `add-cluster.sh`:
+You can make the required changes quickly using the script `add-workload-cluster.sh`:
 
 ```
 cd ~/environment
-eks-multi-cluster-gitops/bin/add-cluster.sh ./gitops-system commercial-staging
+eks-multi-cluster-gitops/bin/add-workload-cluster.sh ./gitops-system commercial-staging ./gitops-workloads
 ```
 
 Once done, commit and push the changes as follows:
@@ -58,9 +58,9 @@ to monitor the creation of resources for the new cluster.
 
 You can repeat the same process to create the `commercial-prod` cluster.
 
-### Detailed explanation of `add-cluster.sh` script
+### Detailed explanation of `add-workload-cluster.sh` script
 
-The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
+The `add-workload-cluster.sh` script performs the following steps (plus input validation and an idempotency check on `kustomization.yaml` that this manual walkthrough skips). You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
 1. **Instantiate the `cluster-configs` template:** This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
    It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
@@ -434,35 +434,24 @@ You also need to tidy up various directories by removing the various cluster man
 Before proceeding, you should ensure that all applications running in the cluster
 have been removed.
 
-You can make the required repo changes quickly using the script `remove-cluster.sh`:
+You can make the required repo changes quickly using the script `remove-workload-cluster.sh`:
 
 ```
 cd ~/environment
-eks-multi-cluster-gitops/bin/remove-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
+eks-multi-cluster-gitops/bin/remove-workload-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
 ```
 
-Once done, commit and push the changes as follows:
+Unlike the other `bin/` scripts, `remove-workload-cluster.sh` commits and pushes both
+repos itself, forces a Flux reconciliation, and polls Crossplane until the cluster's AWS
+resources are fully torn down — no separate commit/push/monitor steps are needed.
 
-```
-cd gitops-system
-git add .
-git commit -m "Removed cluster commercial-staging"
-git push
-cd ../gitops-workloads
-git add .
-git commit -m "Removed cluster commercial-staging"
-git push
-```
+### Detailed explanation of `remove-workload-cluster.sh` script
 
-You can monitor the reconciliation of resources in the management cluster using
-
-```
-kubectl get kustomization -n flux-system
-```
-
-### Detailed explanation of `remove-cluster.sh` script
-
-The `remove-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
+The `remove-workload-cluster.sh` script performs the following steps (plus committing/
+pushing both repos, forcing Flux reconciliation, and monitoring Crossplane teardown,
+which this manual walkthrough doesn't cover). You can choose to execute these steps
+instead of running the script. Please ensure your working directory is set to
+`~/environment` before executing.
 
 1. **Remove `commercial-staging` from `gitops-system/clusters-config/kustomization.yaml`:**
    this forces Flux to remove the application resources from the cluster.

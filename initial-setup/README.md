@@ -15,7 +15,6 @@ Your local AWS credentials must have sufficient permissions to:
 - Create and manage EKS clusters (via `eksctl`)
 - Create IAM roles and policies
 - Create and manage Secrets Manager secrets
-- Create S3 buckets and CloudFormation stacks (if using the automated setup)
 - Read/write ECR, VPC, EC2, and related resources (required by Crossplane)
 
 Verify your credentials are configured:
@@ -63,16 +62,17 @@ echo "Platform: $OS/$ARCH"
 
 ### kubectl
 
+Pin kubectl to match the target EKS control-plane version (**1.35.x** — see [AWS's EKS-optimized kubectl builds](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html) for the exact AWS-published binary/date for your platform, or use the upstream build below).
+
 ```bash
-# Linux (amd64)
-sudo curl --silent --location -o /usr/local/bin/kubectl \
-   https://s3.us-west-2.amazonaws.com/amazon-eks/1.31.0/2024-09-12/bin/linux/amd64/kubectl
-sudo chmod +x /usr/local/bin/kubectl
+# Linux (amd64) - upstream build, matches 1.35.x
+curl -LO "https://dl.k8s.io/release/v1.35.0/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # macOS (Homebrew)
 brew install kubectl
 # or pin to the EKS-matched version:
-# curl -LO "https://dl.k8s.io/release/v1.31.0/bin/darwin/$(uname -m)/kubectl"
+# curl -LO "https://dl.k8s.io/release/v1.35.0/bin/darwin/$(uname -m)/kubectl"
 # sudo install -m 755 kubectl /usr/local/bin/kubectl
 ```
 
@@ -89,22 +89,22 @@ Verify: `flux version`
 ### kubeseal
 
 > **Version coupling:** `kubeseal` CLI **must** match the Sealed Secrets controller chart version.
-> This repo pins chart `2.18.5` (controller v0.36.x) → install `kubeseal` v0.36.6.
+> This repo pins chart `2.19.1` (controller v0.38.4) → install `kubeseal` v0.38.4.
 
 ```bash
 # Linux (amd64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-linux-amd64.tar.gz
-tar xfz kubeseal-0.36.6-linux-amd64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-linux-amd64.tar.gz
+tar xfz kubeseal-0.38.4-linux-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
 # macOS (arm64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-darwin-arm64.tar.gz
-tar xfz kubeseal-0.36.6-darwin-arm64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-darwin-arm64.tar.gz
+tar xfz kubeseal-0.38.4-darwin-arm64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
 # macOS (amd64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-darwin-amd64.tar.gz
-tar xfz kubeseal-0.36.6-darwin-amd64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-darwin-amd64.tar.gz
+tar xfz kubeseal-0.38.4-darwin-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 ```
 
@@ -128,14 +128,14 @@ Authenticate: `gh auth login`
 
 ```bash
 # Linux (amd64)
-curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.229.0/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
 sudo mv /tmp/eksctl /usr/local/bin
 
 # macOS
 brew tap weaveworks/tap
 brew install weaveworks/tap/eksctl
 # or direct download:
-# curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.208.0/eksctl_Darwin_arm64.tar.gz" | tar xz -C /tmp
+# curl --silent --location "https://github.com/eksctl-io/eksctl/releases/download/v0.229.0/eksctl_Darwin_arm64.tar.gz" | tar xz -C /tmp
 # sudo mv /tmp/eksctl /usr/local/bin
 ```
 

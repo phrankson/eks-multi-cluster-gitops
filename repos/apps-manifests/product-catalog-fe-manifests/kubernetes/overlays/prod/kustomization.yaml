@@ -4,5 +4,5 @@ resources:
 - ../../base
 namespace: product-catalog-fe
 nameSuffix: -prod
-patchesStrategicMerge:
-- deployment.yaml
+patches:
+- path: deployment.yaml

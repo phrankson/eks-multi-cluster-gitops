@@ -26,6 +26,6 @@ kind: Provider
 metadata:
   name: provider-aws
 spec:
-  package: "xpkg.upbound.io/crossplane-contrib/provider-aws:v0.47.1"
+  package: "xpkg.upbound.io/crossplane-contrib/provider-aws:v0.58.1"
   runtimeConfigRef:
     name: aws-config
