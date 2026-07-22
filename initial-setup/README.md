@@ -89,22 +89,22 @@ Verify: `flux version`
 ### kubeseal
 
 > **Version coupling:** `kubeseal` CLI **must** match the Sealed Secrets controller chart version.
-> This repo pins chart `2.18.5` (controller v0.36.x) → install `kubeseal` v0.36.6.
+> This repo pins chart `2.19.1` (controller v0.38.4) → install `kubeseal` v0.38.4.
 
 ```bash
 # Linux (amd64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-linux-amd64.tar.gz
-tar xfz kubeseal-0.36.6-linux-amd64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-linux-amd64.tar.gz
+tar xfz kubeseal-0.38.4-linux-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
 # macOS (arm64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-darwin-arm64.tar.gz
-tar xfz kubeseal-0.36.6-darwin-arm64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-darwin-arm64.tar.gz
+tar xfz kubeseal-0.38.4-darwin-arm64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
 # macOS (amd64)
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.36.6/kubeseal-0.36.6-darwin-amd64.tar.gz
-tar xfz kubeseal-0.36.6-darwin-amd64.tar.gz
+wget https://github.com/bitnami/sealed-secrets/releases/download/v0.38.4/kubeseal-0.38.4-darwin-amd64.tar.gz
+tar xfz kubeseal-0.38.4-darwin-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 ```
 
