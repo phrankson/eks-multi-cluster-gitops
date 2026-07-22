@@ -650,7 +650,6 @@ export CLUSTER_NAME=mgmt
 **Step 2:** Run the Flux bootstrap command:
 ```bash
 flux bootstrap github \
-  --components-extra=image-reflector-controller,image-automation-controller \
   --owner=$GITHUB_ACCOUNT \
   --namespace=flux-system \
   --repository=gitops-system \
