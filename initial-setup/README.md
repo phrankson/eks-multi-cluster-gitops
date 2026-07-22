@@ -15,7 +15,6 @@ Your local AWS credentials must have sufficient permissions to:
 - Create and manage EKS clusters (via `eksctl`)
 - Create IAM roles and policies
 - Create and manage Secrets Manager secrets
-- Create S3 buckets and CloudFormation stacks (if using the automated setup)
 - Read/write ECR, VPC, EC2, and related resources (required by Crossplane)
 
 Verify your credentials are configured:

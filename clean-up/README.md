@@ -16,7 +16,6 @@ Note that `eksctl delete cluster` does not delete the hosting VPC; please delete
         gh repo delete --confirm gitops-workloads
         gh repo delete --confirm gitops-system  
         ```
-    - If you performed the initial setup using CloudFormation, you can skip this step - the AWS CodeCommit repos will be deleted as part of the CloudFormation stack deletion.
 7. Remove the secret in Secrets Manager.
     ```
     aws secretsmanager delete-secret --secret-id sealed-secrets --force-delete-without-recovery
@@ -39,9 +38,4 @@ starting with "product-" using:
     ```
     aws dynamodb delete-table --table-name <table-name>
     ```
-10. Delete the IAM user that was used to interact with the CodeCommit repos from the Cloud9 environment, and from the EKS clusters by the Flux source controller. Also, delete the associated IAM policy. Skip this step if you used CloudFormation to perform the initial setup.
-
-11. If you used CloudFormation to perform the initial setup, delete the corresponding CloudFormation stack:
-    ```
-    aws cloudformation delete-stack --stack-name gitops-initial-setup
-    ```
+10. Delete the IAM user that was used to interact with the Git repos from your local environment, and from the EKS clusters by the Flux source controller. Also, delete the associated IAM policy.
