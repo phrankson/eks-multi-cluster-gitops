@@ -31,7 +31,7 @@ Hub/spoke model:
 - `tools/` — core tool installs shared across clusters (Crossplane itself, its AWS/K8s providers, External Secrets, Sealed Secrets, Karpenter, AWS LB Controller, EBS CSI, Kubecost) as Flux `HelmRelease`/`HelmRepository` objects.
 - `tools-config/` — IAM roles/policies and config objects (via Crossplane) backing the tools in `tools/`, e.g. `crossplane-eks-composition` (the actual EKS cluster Composition/XRD Crossplane uses), `*-iam` folders.
 - `workloads/<cluster>/` — per-cluster references to application manifest repos (Flux `GitRepository` + `Kustomization` + sealed git secret), populated by `add-cluster-app.sh`.
-- `template/` directories throughout (`clusters/template`, `clusters-config/template`, `workloads/template`) are the source copied by `bin/add-workload-cluster.sh` / `bin/add-cluster.sh` when provisioning a new cluster — **edit templates, not a specific cluster's copy, when changing baseline behavior for future clusters.**
+- `template/` directories throughout (`clusters/template`, `clusters-config/template`, `workloads/template`) are the source copied by `bin/add-workload-cluster.sh` when provisioning a new cluster — **edit templates, not a specific cluster's copy, when changing baseline behavior for future clusters.**
 
 ### `${ACCOUNT_ID}` / other placeholders
 
@@ -39,12 +39,10 @@ Several manifests contain `${ACCOUNT_ID}` and similar placeholders resolved at a
 
 ## Automation scripts (`bin/`)
 
-These operate only on **local clones** of `gitops-system` / `gitops-workloads` — they never commit or push. Caller must `git add/commit/push` afterward.
+Most operate only on **local clones** of `gitops-system` / `gitops-workloads` and never commit or push — caller must `git add/commit/push` afterward. The exception is `remove-workload-cluster.sh`, which commits and pushes both repos itself as part of its teardown flow.
 
-- `add-workload-cluster.sh <gitops-system-path> <cluster-name> [gitops-workloads-path]` — current/preferred way to add a cluster (copies `clusters-config/template`, `clusters/template`, `workloads/template`, replaces the `cluster-name` placeholder, registers it in `clusters-config/kustomization.yaml`).
-- `add-cluster.sh <gitops_system_path> <cluster_name>` — older/simpler variant of the above (see `scenarios.md` for the walkthrough); prefer `add-workload-cluster.sh` for new work.
-- `remove-workload-cluster.sh <gitops-system-path> <gitops-workloads-path> <cluster-name>` — full deprovisioning: deregisters the cluster, commits/pushes both repos, forces Flux reconciliation, monitors Crossplane teardown, clears stuck finalizers, cleans local kubeconfig context. Requires `kubectl`, `flux`, `yq`, `git`, `aws` CLI.
-- `remove-cluster.sh <gitops_system_path> <gitops_workloads_path> <cluster_name>` — removes cluster config/dirs only (no commit/push, no live cluster interaction).
+- `add-workload-cluster.sh <gitops-system-path> <cluster-name> [gitops-workloads-path]` — the sole entrypoint for adding a cluster (copies `clusters-config/template`, `clusters/template`, `workloads/template`, replaces the `cluster-name` placeholder, registers it in `clusters-config/kustomization.yaml`). The older `add-cluster.sh` variant has been retired.
+- `remove-workload-cluster.sh <gitops-system-path> <gitops-workloads-path> <cluster-name>` — the sole entrypoint for removing a cluster: deregisters the cluster, commits/pushes both repos, forces Flux reconciliation, monitors Crossplane teardown, clears stuck finalizers, cleans local kubeconfig context. Requires `kubectl`, `flux`, `yq`, `git`, `aws` CLI. The older `remove-cluster.sh` variant has been retired.
 - `add-cluster-app.sh <gitops_workloads_path> <cluster_name> <app-name> <public_key_pem> <git_creds_template_path> <git_private_key_file> <git_public_key_file> <git_known_hosts> <sealed_secrets_public_pem_file>` — onboards an app onto a cluster: copies the app template into the cluster's workloads folder, seals the git credentials with `kubeseal`, updates `kustomization.yaml`. Assumes an `<app-name>-manifests` repo already exists.
 - `remove-cluster-app.sh <gitops_workloads_path> <cluster_name> <app-name>` — removes an app from a cluster's `kustomization.yaml` and deletes its folder.
 - `update-cluster-app.sh <gitops_workloads_path> <cluster_name> <app_name> <release_tag>` — bumps the app's `git-repo.yaml` `spec.ref.tag` via `yq`, triggering a Flux-driven redeploy.

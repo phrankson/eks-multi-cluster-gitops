@@ -1,32 +1,48 @@
 # Multi-cluster GitOps Scripts
 
-Note: these scripts operate on local repos and do not commit changes or push to remotes.
-Commits and pushes must be done separately.
+Note: most of these scripts operate on local repos only and do not commit changes or
+push to remotes — commits and pushes must be done separately. The exception is
+`remove-workload-cluster.sh`, which does commit and push both repos as part of its
+teardown flow (see below).
 
 ## Workload cluster management
 
-### add-cluster.sh
+### add-workload-cluster.sh
 
 Usage:
 ```
-add-cluster.sh <gitops_system_path> <cluster_name> 
+add-workload-cluster.sh <gitops-system-path> <cluster-name> [gitops-workloads-path]
 ```
 
-Updates the local repo for `gitops-system` to add a new workload cluster.
+Adds a new workload cluster to the `gitops-system` repository by:
+1. Copying `clusters-config/template` → `clusters-config/<cluster-name>`
+2. Copying `clusters/template` → `clusters/<cluster-name>`
+3. Copying `workloads/template` → `workloads/<cluster-name>`
+4. Replacing the `cluster-name` placeholder in all copied files
+5. Registering the cluster in `clusters-config/kustomization.yaml`
+6. Creating a `<cluster-name>/` directory in `gitops-workloads` (if a path is provided)
 
-This is achieved by copying the required template folders into new folders for the cluster to be added, and updating the cluster name. The `kustomization.yaml` file in `clusters-config` is also updated to add the new cluster.
+After running, commit and push both repos for Flux to provision the cluster.
 
-### remove-cluster.sh
+### remove-workload-cluster.sh
 
 Usage:
 ```
-remove-cluster.sh <gitops_system_path> <gitops_workloads_path> <cluster_name> 
+remove-workload-cluster.sh <gitops-system-path> <gitops-workloads-path> <cluster-name>
 ```
 
-This removes the specified cluster from `cluster-configs/kustomization.yaml`, which triggers crossplane to remove the cluster.
+Full deprovisioning workflow — this one **does** commit and push, and talks to a live
+cluster:
+1. Validates inputs and checks the cluster exists
+2. Removes the cluster from `clusters-config/kustomization.yaml`
+3. Deletes cluster directories from `gitops-system` and `gitops-workloads`
+4. Commits and pushes both repos
+5. Forces Flux reconciliation to trigger pruning
+6. Monitors Crossplane resource deletion
+7. Removes stuck finalizers (Kubernetes Provider Objects targeting the deleted cluster)
+8. Cleans up the local kubeconfig context
 
-It also removes all cluster configuration files from the local
-repos for `gitops-system` and `gitops-workloads`.
+Requires `kubectl`, `flux`, `yq`, `git`, and the `aws` CLI.
 
 ## Application management
 
@@ -71,7 +87,7 @@ add-app-cluster-overlay <app_manifests_path> cluster_name
 
 Create a `commercial-staging` cluster:
 ```
-add-cluster.sh ./gitops-system commercial-staging
+add-workload-cluster.sh ./gitops-system commercial-staging ./gitops-workloads
 ```
 
 Commit and push:

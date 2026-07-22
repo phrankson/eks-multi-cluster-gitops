@@ -34,10 +34,10 @@ then
     cp $gitops_workloads/template/kustomization.yaml $gitops_workloads/$cluster_name
 fi
 cp -R $gitops_workloads/template/app-template/* $gitops_workloads/$cluster_name/$app_name
-grep -RiIl 'cluster-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i '' "s/cluster-name/$cluster_name/g"
-grep -RiIl 'overlay-dir-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i '' "s/overlay-dir-name/$overlay_dir_name/g"
-grep -RiIl 'app-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i '' "s/app-name/$app_name/g"
-grep -RiIl 'branch-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i '' "s/branch-name/$branch_name/g"
+grep -RiIl 'cluster-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i.bak "s/cluster-name/$cluster_name/g" && find $gitops_workloads/$cluster_name/$app_name -name '*.bak' -delete
+grep -RiIl 'overlay-dir-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i.bak "s/overlay-dir-name/$overlay_dir_name/g" && find $gitops_workloads/$cluster_name/$app_name -name '*.bak' -delete
+grep -RiIl 'app-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i.bak "s/app-name/$app_name/g" && find $gitops_workloads/$cluster_name/$app_name -name '*.bak' -delete
+grep -RiIl 'branch-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i.bak "s/branch-name/$branch_name/g" && find $gitops_workloads/$cluster_name/$app_name -name '*.bak' -delete
 
 
 # Prep the sealed secret

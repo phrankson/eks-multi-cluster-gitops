@@ -135,7 +135,8 @@ replace_placeholder() {
     files=$(grep -RiIl 'cluster-name' "$dir" 2>/dev/null || true)
     if [[ -n "$files" ]]; then
         echo "$files" | while IFS= read -r f; do
-            sed -i '' "s/cluster-name/$cluster_name/g" "$f"
+            sed -i.bak "s/cluster-name/$cluster_name/g" "$f"
+            rm -f "${f}.bak"
         done
     fi
 }
