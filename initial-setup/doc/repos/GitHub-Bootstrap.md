@@ -10,14 +10,14 @@
    ```bash
    export CLUSTER_NAME=mgmt
    export GITHUB_TOKEN=XXXX
-   export GITHUB_USER=<your-github-username>
+   export GITHUB_ACCOUNT=<your-github-username>
    ```
    
 3. Bootstrap Flux on the management cluster with the `mgmt` cluster config path.
    ```bash
    flux bootstrap github \
    --components-extra=image-reflector-controller,image-automation-controller \
-   --owner=$GITHUB_USER \
+   --owner=$GITHUB_ACCOUNT \
    --namespace=flux-system \
    --repository=gitops-system \
    --branch=main \
@@ -37,4 +37,5 @@
    ```
 
 
-Once done, continue to follow setup instructions [here](../../README.md#connect-to-cluster).
+Once done, the management cluster is fully bootstrapped. Continue with
+[provisioning your first workload cluster](../../../scenarios.md#provision-and-bootstrap-a-new-workload-cluster).

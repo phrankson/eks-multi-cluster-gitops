@@ -453,8 +453,8 @@ eksctl create iamidentitymapping \
 
 ```bash
 cd $GITOPS_HOME
-kubectl apply -f gitops-system/tools-config/eks-console/role.yaml
-kubectl apply -f gitops-system/tools-config/eks-console/role-binding.yaml
+kubectl apply -f gitops-system/tools-config/aws-auth/role.yaml
+kubectl apply -f gitops-system/tools-config/aws-auth/role-binding.yaml
 
 eksctl create iamidentitymapping \
   --cluster mgmt \
@@ -650,6 +650,7 @@ export CLUSTER_NAME=mgmt
 **Step 2:** Run the Flux bootstrap command:
 ```bash
 flux bootstrap github \
+  --components-extra=image-reflector-controller,image-automation-controller \
   --owner=$GITHUB_ACCOUNT \
   --namespace=flux-system \
   --repository=gitops-system \
@@ -659,7 +660,10 @@ flux bootstrap github \
 ```
 
 **What this does:**
-- Installs Flux controllers into the cluster (`flux-system` namespace)
+- Installs Flux controllers into the cluster (`flux-system` namespace), including the
+  image-reflector and image-automation controllers via `--components-extra` — required
+  because the committed `gotk-components.yaml` in this repo already includes them; omitting
+  the flag regenerates that file without them and drifts from what's committed
 - Creates a deploy key on the `gitops-system` GitHub repo so Flux can pull from it
 - Commits Flux's own manifests into `gitops-system/clusters/mgmt/flux-system/` and pushes them
 - Flux immediately starts reconciling — applying everything it finds under `clusters/mgmt/`
@@ -776,4 +780,4 @@ If everything is green, your management cluster is fully operational. You can no
 
 ---
 
-> **Need to rebuild this cluster later?** Most of this guide does not need to be repeated — the Git repos, Secrets Manager keypair, and IAM roles all survive a cluster deletion. See `doc/re-bootstrap.md` for the shorter rebuild path.
+> **Need to rebuild this cluster later?** Most of this guide does not need to be repeated — the Git repos, Secrets Manager keypair, and IAM roles all survive a cluster deletion: re-run "Create the management cluster" through "Bootstrap the management cluster" above, skipping the Git repo creation and Sealed Secrets keypair steps.
